@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Error {{status_code}} • OpenDataLoader RAG</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --canvas: #090a0c;
+      --page: #0d0f12;
+      --surface: #14171c;
+      --inset: #1a1e24;
+      --hover: #222730;
+      --line: rgba(255, 255, 255, 0.08);
+      --line-strong: rgba(255, 255, 255, 0.16);
+      --ink: #f4f5f7;
+      --ink-2: #9ca3af;
+      --ink-3: #656d78;
+      --accent: #3b82f6;
+      --accent-ink: #2563eb;
+      --red: #ef4444;
+      --red-tint: rgba(239, 68, 68, 0.14);
+      --amber: #f59e0b;
+      --amber-tint: rgba(245, 158, 11, 0.14);
+    }
+    html.light {
+      --canvas: #f6f7f9;
+      --page: #ffffff;
+      --surface: #ffffff;
+      --inset: #f3f4f6;
+      --hover: #ebeef2;
+      --line: rgba(0, 0, 0, 0.08);
+      --line-strong: rgba(0, 0, 0, 0.16);
+      --ink: #0f172a;
+      --ink-2: #475569;
+      --ink-3: #94a3b8;
+      --accent: #2563eb;
+      --accent-ink: #1d4ed8;
+      --red: #dc2626;
+      --red-tint: rgba(220, 38, 38, 0.1);
+      --amber: #d97706;
+      --amber-tint: rgba(217, 119, 6, 0.1);
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', -apple-system, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    body {
+      background: var(--canvas);
+      color: var(--ink);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .error-card {
+      max-width: 480px;
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 32px 28px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      text-align: center;
+    }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      font-weight: 600;
+      background: var(--red-tint);
+      color: var(--red);
+      margin-bottom: 18px;
+    }
+    .status-badge.amber {
+      background: var(--amber-tint);
+      color: var(--amber);
+    }
+    .error-title {
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      margin-bottom: 10px;
+      color: var(--ink);
+    }
+    .error-description {
+      font-size: 13.5px;
+      color: var(--ink-2);
+      line-height: 1.55;
+      margin-bottom: 24px;
+    }
+    .action-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: 10px;
+      background: var(--accent);
+      color: white;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.15s ease;
+    }
+    .action-btn:hover {
+      background: var(--accent-ink);
+      transform: translateY(-1px);
+    }
+  </style>
+</head>
+<body>
+  <div class="error-card">
+    <div class="status-badge {{badge_class}}">{{status_code}} ERROR</div>
+    <h1 class="error-title">{{error_title}}</h1>
+    <p class="error-description">{{error_description}}</p>
+    <a href="/" class="action-btn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path d="M19 12H5M12 19l-7-7 7-7"/>
+      </svg>
+      Return to Workspace
+    </a>
+  </div>
+</body>
+</html>

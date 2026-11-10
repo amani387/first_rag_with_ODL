@@ -1,0 +1,1738 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OpenDataLoader + Gemini RAG • AI-Native Interface</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  
+  <style>
+    :root {
+      --canvas: #090a0c;
+      --page: #0d0f12;
+      --surface: #14171c;
+      --inset: #1a1e24;
+      --hover: #222730;
+      --hover-2: #282f3a;
+      --line: rgba(255, 255, 255, 0.08);
+      --line-strong: rgba(255, 255, 255, 0.16);
+      --ink: #f4f5f7;
+      --ink-2: #9ca3af;
+      --ink-3: #656d78;
+      --accent: #3b82f6;
+      --accent-ink: #2563eb;
+      --green: #10b981;
+      --green-tint: rgba(16, 185, 129, 0.14);
+      --amber: #f59e0b;
+      --amber-tint: rgba(245, 158, 11, 0.14);
+      --red: #ef4444;
+      --red-tint: rgba(239, 68, 68, 0.14);
+      --radius-window: 18px;
+      --radius-card: 14px;
+      --radius-control: 8px;
+    }
+
+    html.light {
+      --canvas: #f6f7f9;
+      --page: #ffffff;
+      --surface: #ffffff;
+      --inset: #f3f4f6;
+      --hover: #ebeef2;
+      --hover-2: #e2e5ea;
+      --line: rgba(0, 0, 0, 0.08);
+      --line-strong: rgba(0, 0, 0, 0.16);
+      --ink: #0f172a;
+      --ink-2: #475569;
+      --ink-3: #94a3b8;
+      --accent: #2563eb;
+      --accent-ink: #1d4ed8;
+      --green: #059669;
+      --green-tint: rgba(5, 150, 105, 0.1);
+      --amber: #d97706;
+      --amber-tint: rgba(217, 119, 6, 0.1);
+      --red: #dc2626;
+      --red-tint: rgba(220, 38, 38, 0.1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      background-color: var(--canvas);
+      color: var(--ink);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* BeautifulUI Shimmer Animation */
+    @keyframes shimmer-text {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+
+    .shimmer-text {
+      background: linear-gradient(90deg, var(--ink-3) 30%, var(--ink) 50%, var(--ink-3) 70%);
+      background-size: 200% 100%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: shimmer-text 2s linear infinite;
+    }
+
+    /* BeautifulUI Pixel-grid loader */
+    @keyframes pixel-on {
+      0%, 100% { opacity: 0.15; }
+      50% { opacity: 1; }
+    }
+
+    .pixel-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 3.5px);
+      gap: 1.5px;
+    }
+
+    .pixel-dot {
+      width: 3.5px;
+      height: 3.5px;
+      background-color: var(--ink);
+      border-radius: 1px;
+      opacity: 0.2;
+    }
+
+    .pixel-dot:nth-child(1) { animation: pixel-on 700ms ease-in-out 0ms infinite; }
+    .pixel-dot:nth-child(2) { animation: pixel-on 700ms ease-in-out 100ms infinite; }
+    .pixel-dot:nth-child(3) { animation: pixel-on 700ms ease-in-out 200ms infinite; }
+    .pixel-dot:nth-child(4) { animation: pixel-on 700ms ease-in-out 100ms infinite; }
+    .pixel-dot:nth-child(5) { animation: pixel-on 700ms ease-in-out 200ms infinite; }
+    .pixel-dot:nth-child(6) { animation: pixel-on 700ms ease-in-out 300ms infinite; }
+    .pixel-dot:nth-child(7) { animation: pixel-on 700ms ease-in-out 200ms infinite; }
+    .pixel-dot:nth-child(8) { animation: pixel-on 700ms ease-in-out 300ms infinite; }
+    .pixel-dot:nth-child(9) { animation: pixel-on 700ms ease-in-out 400ms infinite; }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--line-strong);
+      border-radius: 10px;
+    }
+
+    /* Layout Containers */
+    .app-container {
+      max-width: 1240px;
+      width: 100%;
+      margin: 0 auto;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      border-left: 1px dashed var(--line);
+      border-right: 1px dashed var(--line);
+      background-color: var(--page);
+    }
+
+    header {
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px dashed var(--line);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 9px;
+      background: linear-gradient(135deg, #2563eb, #7c3aed);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 700;
+      font-size: 15px;
+      box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
+    }
+
+    .brand-title {
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-subtitle {
+      font-size: 11.5px;
+      color: var(--ink-3);
+    }
+
+    .top-badges {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      background: var(--inset);
+      border: 1px solid var(--line);
+      color: var(--ink-2);
+    }
+
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background-color: var(--green);
+      box-shadow: 0 0 6px var(--green);
+    }
+
+    .theme-toggle {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: var(--inset);
+      border: 1px solid var(--line);
+      color: var(--ink-2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .theme-toggle:hover {
+      background: var(--hover);
+      color: var(--ink);
+    }
+
+    /* Main Grid */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      flex: 1;
+      min-height: calc(100vh - 65px);
+    }
+
+    .mobile-tabs {
+      display: none;
+      padding: 8px 16px;
+      gap: 8px;
+      border-bottom: 1px dashed var(--line);
+      background: var(--surface);
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+
+    .mobile-tab-btn {
+      flex: 1;
+      padding: 9px 12px;
+      border-radius: var(--radius-control);
+      border: 1px solid var(--line);
+      background: var(--inset);
+      color: var(--ink-2);
+      font-size: 12.5px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .mobile-tab-btn.active {
+      background: var(--hover-2);
+      color: var(--ink);
+      border-color: var(--accent);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    }
+
+    @media (max-width: 900px) {
+      .mobile-tabs {
+        display: flex;
+      }
+      .main-grid {
+        display: block;
+        min-height: auto;
+      }
+      .sidebar {
+        border-right: none;
+        border-bottom: 1px dashed var(--line);
+        position: relative;
+        max-height: none;
+        top: 0;
+        padding: 20px 16px;
+      }
+      .sidebar.mobile-hidden {
+        display: none !important;
+      }
+      .chat-area {
+        min-height: calc(100dvh - 125px);
+      }
+      .chat-area.mobile-hidden {
+        display: none !important;
+      }
+      .composer-wrapper {
+        position: fixed;
+        bottom: 12px;
+        left: 0;
+        right: 0;
+        padding: 0 12px;
+      }
+      .composer {
+        max-width: 100%;
+        border-radius: 20px;
+        padding: 6px 10px;
+      }
+    }
+
+    @media (max-width: 640px) {
+      header {
+        padding: 10px 14px;
+      }
+      .brand-title {
+        font-size: 13.5px;
+      }
+      .brand-subtitle {
+        display: none;
+      }
+      .badge {
+        padding: 3px 8px;
+        font-size: 11px;
+      }
+      .messages-container {
+        padding: 16px 12px 105px;
+        gap: 16px;
+      }
+      .message-user {
+        max-width: 94%;
+        font-size: 13px;
+        padding: 10px 14px;
+      }
+      .message-assistant {
+        max-width: 100%;
+      }
+      .doc-pill {
+        max-width: 110px;
+        padding: 3px 7px;
+        font-size: 11px;
+      }
+      .doc-pill span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .composer-input {
+        font-size: 13.5px;
+      }
+      .answer-card {
+        padding: 14px;
+      }
+      .answer-text {
+        font-size: 13px;
+      }
+      .starter-btn {
+        font-size: 12px;
+        padding: 9px 10px;
+      }
+      .source-chip {
+        font-size: 11px;
+        padding: 3px 8px;
+      }
+    }
+
+    /* Left Sidebar: Ingestion */
+    .sidebar {
+      border-right: 1px dashed var(--line);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      background: var(--page);
+      max-height: calc(100vh - 65px);
+      overflow-y: auto;
+      position: sticky;
+      top: 0;
+    }
+
+    .section-label {
+      font-size: 11.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--ink-3);
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    /* Upload Zone */
+    .dropzone {
+      border: 1px dashed var(--line-strong);
+      border-radius: var(--radius-card);
+      padding: 24px 16px;
+      text-align: center;
+      cursor: pointer;
+      background: var(--surface);
+      transition: all 0.2s ease;
+      position: relative;
+    }
+
+    .dropzone:hover, .dropzone.dragover {
+      border-color: var(--accent);
+      background: var(--inset);
+    }
+
+    .dropzone-icon {
+      width: 40px;
+      height: 40px;
+      margin: 0 auto 10px;
+      border-radius: 10px;
+      background: var(--inset);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--ink-2);
+    }
+
+    .dropzone-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--ink);
+      margin-bottom: 4px;
+    }
+
+    .dropzone-subtitle {
+      font-size: 11.5px;
+      color: var(--ink-3);
+    }
+
+    /* BeautifulUI Task Rows */
+    .task-card {
+      border-radius: var(--radius-card);
+      background: var(--surface);
+      border: 1px solid var(--line);
+      overflow: hidden;
+      transition: all 0.2s ease;
+    }
+
+    .task-header {
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+    }
+
+    .task-icon-circle {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .task-icon-circle.success {
+      background: var(--green-tint);
+      color: var(--green);
+    }
+
+    .task-icon-circle.loading {
+      background: var(--amber-tint);
+      color: var(--amber);
+    }
+
+    .task-icon-circle.error {
+      background: var(--red-tint);
+      color: var(--red);
+    }
+
+    .task-title {
+      font-size: 13px;
+      font-weight: 500;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .task-badge {
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 10px;
+      font-weight: 500;
+    }
+
+    .task-badge.indexed {
+      background: var(--green-tint);
+      color: var(--green);
+    }
+
+    .task-badge.processing {
+      background: var(--amber-tint);
+      color: var(--amber);
+    }
+
+    .task-badge.failed {
+      background: var(--red-tint);
+      color: var(--red);
+    }
+
+    .task-steps {
+      padding: 8px 14px 14px 20px;
+      border-top: 1px solid var(--line);
+      position: relative;
+      max-height: 200px;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+    }
+
+    .task-steps::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .task-steps::-webkit-scrollbar-thumb {
+      background: var(--line-strong);
+      border-radius: 4px;
+    }
+
+    .step-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 12px;
+      color: var(--ink-2);
+      margin-bottom: 8px;
+      position: relative;
+    }
+
+    .step-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .step-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      margin-top: 6px;
+      flex-shrink: 0;
+    }
+
+    .step-text {
+      flex: 1;
+      font-size: 11.5px;
+      line-height: 1.4;
+    }
+
+    /* Active Document Meta */
+    .doc-meta-card {
+      background: var(--inset);
+      border-radius: var(--radius-card);
+      padding: 14px;
+      border: 1px solid var(--line);
+    }
+
+    .meta-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+
+    .meta-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .meta-label {
+      color: var(--ink-3);
+    }
+
+    .meta-value {
+      color: var(--ink);
+      font-weight: 500;
+    }
+
+    /* Right Chat / Query Area */
+    .chat-area {
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      background: var(--page);
+    }
+
+    .messages-container {
+      flex: 1;
+      padding: 32px 36px 120px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    @media (max-width: 640px) {
+      .messages-container {
+        padding: 20px 16px 120px;
+      }
+    }
+
+    /* Empty State */
+    .empty-state {
+      margin: auto;
+      max-width: 480px;
+      text-align: center;
+      padding: 30px 0;
+    }
+
+    .empty-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 16px;
+      background: var(--inset);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+      color: var(--accent);
+    }
+
+    .empty-title {
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+
+    .empty-subtitle {
+      font-size: 13px;
+      color: var(--ink-2);
+      line-height: 1.5;
+      margin-bottom: 24px;
+    }
+
+    .starter-queries {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .starter-btn {
+      padding: 10px 14px;
+      border-radius: var(--radius-control);
+      background: var(--surface);
+      border: 1px solid var(--line);
+      color: var(--ink-2);
+      font-size: 13px;
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .starter-btn:hover {
+      background: var(--hover);
+      color: var(--ink);
+      border-color: var(--line-strong);
+      transform: translateX(2px);
+    }
+
+    /* Messages */
+    .message-user {
+      align-self: flex-end;
+      max-width: 80%;
+      background: var(--inset);
+      border: 1px solid var(--line);
+      border-radius: 16px 16px 4px 16px;
+      padding: 12px 18px;
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--ink);
+    }
+
+    .message-assistant {
+      align-self: flex-start;
+      max-width: 90%;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* BeautifulUI Thinking State Primitive */
+    .thinking-box {
+      border-radius: var(--radius-card);
+      background: var(--surface);
+      border: 1px solid var(--line);
+      overflow: hidden;
+      transition: all 0.2s ease;
+    }
+
+    .thinking-toggle {
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      background: transparent;
+      border: none;
+      width: 100%;
+      text-align: left;
+    }
+
+    .thinking-sparkle {
+      color: var(--accent);
+    }
+
+    .thinking-label {
+      font-size: 12.5px;
+      font-weight: 500;
+    }
+
+    .thinking-duration {
+      font-size: 11px;
+      color: var(--ink-3);
+      margin-left: auto;
+    }
+
+    .thinking-chevron {
+      color: var(--ink-3);
+      transition: transform 0.2s ease;
+    }
+
+    .thinking-box.expanded .thinking-chevron {
+      transform: rotate(180deg);
+    }
+
+    .thinking-content {
+      display: none;
+      padding: 10px 14px 12px;
+      border-top: 1px solid var(--line);
+      font-size: 12px;
+      color: var(--ink-2);
+      line-height: 1.6;
+      background: var(--inset);
+    }
+
+    .thinking-box.expanded .thinking-content {
+      display: block;
+    }
+
+    /* Assistant Answer Text */
+    .answer-card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-card);
+      padding: 18px 20px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+
+    .answer-text {
+      font-size: 14px;
+      line-height: 1.65;
+      color: var(--ink);
+      white-space: pre-wrap;
+    }
+
+    /* Sources List & Badges */
+    .sources-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 16px;
+      margin-bottom: 8px;
+      font-size: 11.5px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--ink-3);
+    }
+
+    .source-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .source-chip {
+      background: var(--inset);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 4px 10px;
+      font-size: 11.5px;
+      color: var(--ink-2);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .source-chip:hover {
+      background: var(--hover);
+      color: var(--ink);
+      border-color: var(--accent);
+    }
+
+    .source-preview-box {
+      margin-top: 10px;
+      background: var(--inset);
+      border-radius: var(--radius-control);
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      font-size: 12px;
+      line-height: 1.5;
+      display: none;
+    }
+
+    .source-preview-box.open {
+      display: block;
+    }
+
+    /* Floating Chat Composer Primitive (BeautifulUI) */
+    .composer-wrapper {
+      position: absolute;
+      bottom: 20px;
+      left: 0;
+      right: 0;
+      padding: 0 24px;
+      pointer-events: none;
+    }
+
+    .composer {
+      pointer-events: auto;
+      max-width: 760px;
+      margin: 0 auto;
+      background: var(--surface);
+      border: 1px solid var(--line-strong);
+      border-radius: 24px;
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+      backdrop-filter: blur(12px);
+    }
+
+    .doc-pill {
+      background: var(--inset);
+      border: 1px solid var(--line);
+      padding: 4px 10px;
+      border-radius: 16px;
+      font-size: 11.5px;
+      color: var(--ink-2);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .composer-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--ink);
+      font-size: 14px;
+      padding: 6px 4px;
+    }
+
+    .composer-input::placeholder {
+      color: var(--ink-3);
+    }
+
+    .composer-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-send {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: white;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      flex-shrink: 0;
+    }
+
+    .btn-send:hover {
+      background: var(--accent-ink);
+      transform: scale(1.05);
+    }
+
+    .btn-send:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Offline / Network Warning Banner */
+    .offline-banner {
+      display: none;
+      background: var(--red);
+      color: white;
+      padding: 8px 16px;
+      font-size: 12.5px;
+      font-weight: 500;
+      text-align: center;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      z-index: 50;
+      animation: slideDown 0.25s ease-out;
+    }
+
+    .offline-banner.active {
+      display: flex;
+    }
+
+    @keyframes slideDown {
+      from { transform: translateY(-100%); }
+      to { transform: translateY(0); }
+    }
+
+    /* BeautifulUI Error Modal Dialog */
+    .error-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(4px);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .error-modal-backdrop.open {
+      display: flex;
+    }
+
+    .error-modal {
+      max-width: 440px;
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius-window);
+      padding: 24px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+      animation: modalPop 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    @keyframes modalPop {
+      from { transform: scale(0.94); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .error-modal-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      background: var(--red-tint);
+      color: var(--red);
+      margin-bottom: 12px;
+    }
+
+    .error-modal-badge.amber {
+      background: var(--amber-tint);
+      color: var(--amber);
+    }
+
+    .error-modal-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--ink);
+      margin-bottom: 8px;
+    }
+
+    .error-modal-desc {
+      font-size: 13px;
+      color: var(--ink-2);
+      line-height: 1.5;
+      margin-bottom: 20px;
+      word-break: break-word;
+    }
+
+    .error-modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .modal-btn {
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 12.5px;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid var(--line);
+      background: var(--inset);
+      color: var(--ink);
+      transition: all 0.15s ease;
+    }
+
+    .modal-btn:hover {
+      background: var(--hover);
+    }
+
+    .modal-btn.primary {
+      background: var(--accent);
+      color: white;
+      border-color: transparent;
+    }
+
+    .modal-btn.primary:hover {
+      background: var(--accent-ink);
+    }
+  </style>
+</head>
+<body>
+  <!-- Offline Network Banner -->
+  <div class="offline-banner" id="offlineBanner">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="1" y1="1" x2="23" y2="23"></line>
+      <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"></path>
+      <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"></path>
+      <path d="M10.71 5.05A16 16 0 0 1 22.58 9"></path>
+      <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"></path>
+      <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+      <line x1="12" y1="20" x2="12.01" y2="20"></line>
+    </svg>
+    <span>Network connection lost. You are currently offline.</span>
+    <button class="modal-btn" style="padding: 2px 10px; font-size: 11px; margin-left: 8px;" onclick="window.location.reload()">Retry</button>
+  </div>
+
+  <!-- Error Modal Backdrop -->
+  <div class="error-modal-backdrop" id="errorModalBackdrop">
+    <div class="error-modal">
+      <div class="error-modal-badge" id="modalBadge">400 BAD REQUEST</div>
+      <div class="error-modal-title" id="modalTitle">Invalid Document</div>
+      <div class="error-modal-desc" id="modalDesc">Error description goes here.</div>
+      <div class="error-modal-actions">
+        <button class="modal-btn" onclick="closeErrorModal()">Dismiss</button>
+        <button class="modal-btn primary" id="modalActionBtn" onclick="closeErrorModal()">Got it</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-container">
+    <!-- Header -->
+    <header>
+      <div class="brand">
+        <div class="brand-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+        </div>
+        <div>
+          <div class="brand-title">OpenDataLoader + Gemini RAG</div>
+          <div class="brand-subtitle">AI-Native PDF Ingestion & Semantic Retrieval</div>
+        </div>
+      </div>
+
+      <div class="top-badges">
+        <div class="badge" id="backendBadge">
+          <span class="badge-dot"></span>
+          <span id="backendStatus">Gemini 3.6 Flash</span>
+        </div>
+        <button class="theme-toggle" id="themeToggle" title="Toggle Light/Dark Theme">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Mobile View Switcher (Visible on <= 900px) -->
+    <div class="mobile-tabs" id="mobileTabs">
+      <button class="mobile-tab-btn active" id="tabDocBtn" onclick="switchMobileTab('doc')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path></svg>
+        Document & Pipeline
+      </button>
+      <button class="mobile-tab-btn" id="tabChatBtn" onclick="switchMobileTab('chat')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+        Chat & Retrieval
+      </button>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="main-grid">
+      <!-- Left Sidebar: Document Upload & Status -->
+      <aside class="sidebar">
+        <div>
+          <div class="section-label">1. Ingest Document</div>
+          <div class="dropzone" id="dropzone">
+            <input type="file" id="fileInput" accept=".pdf" style="display: none;" />
+            <div class="dropzone-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+              </svg>
+            </div>
+            <div class="dropzone-title">Drop your PDF here</div>
+            <div class="dropzone-subtitle">or click to browse files</div>
+          </div>
+        </div>
+
+        <!-- Ingestion Task Status -->
+        <div id="taskSection" style="display: none;">
+          <div class="section-label">Ingestion Pipeline</div>
+          <div class="task-card">
+            <div class="task-header" id="taskHeader" title="Click to collapse/expand pipeline logs" style="cursor: pointer;">
+              <div class="task-icon-circle success" id="taskIcon">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </div>
+              <div class="task-title" id="taskFilename">document.pdf</div>
+              <span class="task-badge indexed" id="taskBadge">Indexed</span>
+              <svg id="taskChevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left: 4px; color: var(--ink-3); transition: transform 0.2s ease;">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
+            <div class="task-steps" id="taskSteps">
+              <!-- Steps populated via JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Active Document Details -->
+        <div id="docMetaSection" style="display: none;">
+          <div class="section-label">Document Info</div>
+          <div class="doc-meta-card">
+            <div class="meta-row">
+              <span class="meta-label">Upload ID</span>
+              <span class="meta-value font-mono" id="metaUploadId" style="font-size: 11px;">-</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">Indexed Chunks</span>
+              <span class="meta-value" id="metaChunksCount">-</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">Vector Store</span>
+              <span class="meta-value" id="metaStore">ChromaDB</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">Bounding Boxes</span>
+              <span class="meta-value" style="color: var(--green);">Preserved (100%)</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Right Chat / Query Interface -->
+      <main class="chat-area">
+        <div class="messages-container" id="messagesContainer">
+          <!-- Empty State -->
+          <div class="empty-state" id="emptyState">
+            <div class="empty-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+              </svg>
+            </div>
+            <div class="empty-title">Ask anything about your PDF</div>
+            <div class="empty-subtitle">Upload a document on the left, or try sample queries once indexed. Every answer includes exact page numbers and bounding boxes.</div>
+            <div class="starter-queries">
+              <button class="starter-btn" onclick="useQuery('What is the main topic and purpose of this document?')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"></path></svg>
+                What is the main topic and purpose of this document?
+              </button>
+              <button class="starter-btn" onclick="useQuery('Summarize the key sections and findings.')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"></path></svg>
+                Summarize the key sections and findings.
+              </button>
+              <button class="starter-btn" onclick="useQuery('Extract any dates, numbers, or specific terms mentioned.')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"></path></svg>
+                Extract any dates, numbers, or specific terms mentioned.
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Floating Chat Composer Primitive -->
+        <div class="composer-wrapper">
+          <form class="composer" id="queryForm" onsubmit="handleQuerySubmit(event)">
+            <div class="doc-pill" id="activeDocPill" style="color: var(--ink-3);">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              </svg>
+              <span id="activeDocName">No PDF uploaded</span>
+            </div>
+            <input type="text" id="queryInput" class="composer-input" placeholder="Ask a question about your PDF..." autocomplete="off" />
+            <div class="composer-actions">
+              <button type="submit" class="btn-send" id="sendBtn" title="Send question">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13"></line>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+              </button>
+            </div>
+          </form>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    // State: No document initially until user uploads
+    let activeUploadId = null;
+    let activeFileName = null;
+    const API_BASE = window.location.origin;
+
+    // Theme Toggle
+    const themeToggle = document.getElementById("themeToggle");
+    themeToggle.addEventListener("click", () => {
+      const isDark = document.documentElement.classList.toggle("dark");
+      document.documentElement.classList.toggle("light", !isDark);
+      localStorage.setItem("bui-theme", isDark ? "dark" : "light");
+    });
+
+    // Mobile View Tab Switcher
+    function switchMobileTab(tab) {
+      const sidebar = document.querySelector(".sidebar");
+      const chatArea = document.querySelector(".chat-area");
+      const tabDocBtn = document.getElementById("tabDocBtn");
+      const tabChatBtn = document.getElementById("tabChatBtn");
+
+      if (tab === "doc") {
+        sidebar.classList.remove("mobile-hidden");
+        chatArea.classList.add("mobile-hidden");
+        tabDocBtn.classList.add("active");
+        tabChatBtn.classList.remove("active");
+      } else {
+        sidebar.classList.add("mobile-hidden");
+        chatArea.classList.remove("mobile-hidden");
+        tabDocBtn.classList.remove("active");
+        tabChatBtn.classList.add("active");
+      }
+    }
+
+    // Set default mobile view to doc if width <= 900
+    if (window.innerWidth <= 900) {
+      switchMobileTab("doc");
+    }
+
+    // Toggle Ingestion Pipeline steps on taskHeader click
+    const taskHeader = document.getElementById("taskHeader");
+    taskHeader.addEventListener("click", () => {
+      const steps = document.getElementById("taskSteps");
+      const chevron = document.getElementById("taskChevron");
+      const isHidden = steps.style.display === "none";
+      steps.style.display = isHidden ? "block" : "none";
+      if (chevron) chevron.style.transform = isHidden ? "rotate(0deg)" : "rotate(-90deg)";
+    });
+
+    // Modal Controller for Errors and Edge Cases
+    function showErrorModal(code, title, desc, actionText = "Got it", actionFn = null) {
+      const backdrop = document.getElementById("errorModalBackdrop");
+      const badge = document.getElementById("modalBadge");
+      const titleEl = document.getElementById("modalTitle");
+      const descEl = document.getElementById("modalDesc");
+      const btn = document.getElementById("modalActionBtn");
+
+      badge.textContent = code;
+      if (code.includes("400") || code.includes("404")) {
+        badge.className = "error-modal-badge amber";
+      } else {
+        badge.className = "error-modal-badge";
+      }
+
+      titleEl.textContent = title;
+      descEl.textContent = desc;
+      btn.textContent = actionText;
+      btn.onclick = () => {
+        closeErrorModal();
+        if (actionFn) actionFn();
+      };
+
+      backdrop.classList.add("open");
+    }
+
+    function closeErrorModal() {
+      document.getElementById("errorModalBackdrop").classList.remove("open");
+    }
+
+    // Network / Offline event listeners
+    window.addEventListener("offline", () => {
+      document.getElementById("offlineBanner").classList.add("active");
+    });
+    window.addEventListener("online", () => {
+      document.getElementById("offlineBanner").classList.remove("active");
+    });
+
+    // File Upload handling
+    const dropzone = document.getElementById("dropzone");
+    const fileInput = document.getElementById("fileInput");
+
+    dropzone.addEventListener("click", () => fileInput.click());
+    dropzone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      dropzone.classList.add("dragover");
+    });
+    dropzone.addEventListener("dragleave", () => dropzone.classList.remove("dragover"));
+    dropzone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropzone.classList.remove("dragover");
+      if (e.dataTransfer.files.length) {
+        uploadFile(e.dataTransfer.files[0]);
+      }
+    });
+    fileInput.addEventListener("change", () => {
+      if (fileInput.files.length) {
+        uploadFile(fileInput.files[0]);
+      }
+    });
+
+    async function uploadFile(file) {
+      // Offline check
+      if (!navigator.onLine) {
+        showErrorModal(
+          "OFFLINE",
+          "You are Currently Offline",
+          "Uploads and AI queries require an active network connection. Please check your connection and retry."
+        );
+        return;
+      }
+
+      // 1. Edge Case: File extension check
+      if (!file.name.toLowerCase().endsWith(".pdf")) {
+        const ext = file.name.includes(".") ? file.name.split(".").pop() : "unknown";
+        showErrorModal(
+          "400 BAD REQUEST",
+          "Unsupported File Format",
+          `Only PDF documents (.pdf) can be parsed by OpenDataLoader. You selected a file of type '.${ext}'.`
+        );
+        return;
+      }
+
+      // 2. Edge Case: Empty file (0 bytes)
+      if (file.size === 0) {
+        showErrorModal(
+          "400 BAD REQUEST",
+          "Empty Document (0 Bytes)",
+          "The selected file contains 0 bytes. Please upload a valid document with content."
+        );
+        return;
+      }
+
+      // 3. Edge Case: File too large (> 50MB)
+      if (file.size > 50 * 1024 * 1024) {
+        const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+        showErrorModal(
+          "400 BAD REQUEST",
+          "File Size Exceeded",
+          `The selected file is ${sizeMb} MB. Maximum supported upload size is 50 MB.`
+        );
+        return;
+      }
+
+      // 4. Edge Case: Client-Side Magic Bytes Validation (%PDF-)
+      try {
+        const slice = file.slice(0, 1024);
+        const buffer = await slice.arrayBuffer();
+        const headerText = new TextDecoder("ascii").decode(buffer);
+        if (!headerText.includes("%PDF-")) {
+          showErrorModal(
+            "400 BAD REQUEST",
+            "Malformed or Spoofed PDF",
+            "This file does not have a valid PDF header (%PDF-). It appears to be an image or document with a renamed file extension."
+          );
+          return;
+        }
+      } catch (err) {
+        // Continue if browser FileReader has an issue
+      }
+
+      showTaskProcessing(file.name);
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      try {
+        const resp = await fetch(`${API_BASE}/upload_pdf`, {
+          method: "POST",
+          body: formData
+        });
+
+        if (!resp.ok) {
+          let errDetail = `Server responded with HTTP ${resp.status}`;
+          try {
+            const errData = await resp.json();
+            errDetail = errData.detail || errData.error || errDetail;
+          } catch (_) {}
+
+          if (resp.status === 400) {
+            showErrorModal("400 BAD REQUEST", "Validation Error", errDetail);
+          } else if (resp.status === 404) {
+            showErrorModal("404 NOT FOUND", "Endpoint Not Found", errDetail);
+          } else if (resp.status === 500) {
+            showErrorModal("500 INTERNAL ERROR", "Server Ingestion Error", errDetail);
+          } else if (resp.status === 503) {
+            showErrorModal("503 SERVICE UNAVAILABLE", "Service Unavailable", errDetail);
+          } else {
+            showErrorModal(`${resp.status} ERROR`, "Upload Failed", errDetail);
+          }
+          showTaskError(errDetail);
+          return;
+        }
+
+        const data = await resp.json();
+        activeUploadId = data.upload_id;
+        activeFileName = data.filename;
+        document.getElementById("activeDocName").textContent = activeFileName;
+
+        pollStatus(activeUploadId, activeFileName);
+      } catch (err) {
+        const isNetwork = err instanceof TypeError || !navigator.onLine;
+        const code = isNetwork ? "NETWORK ERROR" : "CLIENT ERROR";
+        const title = isNetwork ? "Network Connection Failed" : "Upload Failed";
+        const desc = isNetwork 
+          ? `Could not reach backend API at ${API_BASE}. Please verify your connection or ensure the server is running.`
+          : err.message;
+        
+        showErrorModal(code, title, desc, "Retry", () => uploadFile(file));
+        showTaskError(desc);
+      }
+    }
+
+    function showTaskProcessing(filename) {
+      document.getElementById("taskSection").style.display = "block";
+      document.getElementById("taskFilename").textContent = filename;
+      document.getElementById("taskBadge").className = "task-badge processing";
+      document.getElementById("taskBadge").textContent = "Processing";
+      document.getElementById("taskIcon").className = "task-icon-circle loading";
+      document.getElementById("taskIcon").innerHTML = `
+        <div class="pixel-grid">
+          <div class="pixel-dot"></div><div class="pixel-dot"></div><div class="pixel-dot"></div>
+          <div class="pixel-dot"></div><div class="pixel-dot"></div><div class="pixel-dot"></div>
+          <div class="pixel-dot"></div><div class="pixel-dot"></div><div class="pixel-dot"></div>
+        </div>
+      `;
+      document.getElementById("taskSteps").innerHTML = `
+        <div class="step-item"><div class="step-dot"></div><div class="step-text shimmer-text">Parsing with OpenDataLoader PDF...</div></div>
+      `;
+    }
+
+    async function pollStatus(uploadId, filename) {
+      const interval = setInterval(async () => {
+        try {
+          const resp = await fetch(`${API_BASE}/status/${uploadId}`);
+          if (!resp.ok) return;
+          const status = await resp.json();
+
+          if (status.logs && status.logs.length) {
+            document.getElementById("taskSteps").innerHTML = status.logs.map(log => {
+              let clean = log;
+              if (log.startsWith("ODL Stdout:") || log.length > 130 || log.includes("\n")) {
+                clean = "ODL Processed document structure & JSON elements";
+              }
+              const safeFull = (log || "").replace(/"/g, '&quot;');
+              const safeText = (clean || "").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+              return `
+              <div class="step-item" title="${safeFull}">
+                <div class="step-dot"></div>
+                <div class="step-text">${safeText}</div>
+              </div>
+            `;
+            }).join("");
+          }
+
+          if (status.status === "indexed") {
+            clearInterval(interval);
+            document.getElementById("taskBadge").className = "task-badge indexed";
+            document.getElementById("taskBadge").textContent = "Indexed";
+            document.getElementById("taskIcon").className = "task-icon-circle success";
+            document.getElementById("taskIcon").innerHTML = `
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            `;
+            // Show meta
+            document.getElementById("docMetaSection").style.display = "block";
+            document.getElementById("metaUploadId").textContent = uploadId.slice(0, 16) + "...";
+            document.getElementById("metaChunksCount").textContent = status.chunks_count || "1";
+            document.getElementById("metaStore").textContent = status.vector_store || "ChromaDB";
+
+            // If on mobile/tablet, smoothly switch to chat view
+            if (window.innerWidth <= 900) {
+              setTimeout(() => {
+                switchMobileTab("chat");
+              }, 1000);
+            }
+          } else if (status.status === "failed") {
+            clearInterval(interval);
+            showTaskError(status.logs[status.logs.length - 1] || "Ingestion failed");
+          }
+        } catch (e) {
+          // ignore transient poll error
+        }
+      }, 1000);
+    }
+
+    function showTaskError(msg) {
+      document.getElementById("taskBadge").className = "task-badge failed";
+      document.getElementById("taskBadge").textContent = "Failed";
+      document.getElementById("taskIcon").className = "task-icon-circle error";
+      document.getElementById("taskSteps").innerHTML += `
+        <div class="step-item" style="color: var(--red);"><div class="step-dot" style="background: var(--red)"></div><div class="step-text">${msg}</div></div>
+      `;
+    }
+
+    // Document Upload Requirement Prompt
+    function requireDocumentUpload() {
+      showErrorModal(
+        "NO PDF UPLOADED",
+        "Please Upload a PDF First",
+        "You haven't uploaded any document yet. Please drag & drop or select a PDF on the left panel so OpenDataLoader can parse and index it before asking questions.",
+        "Upload PDF",
+        () => {
+          if (window.innerWidth <= 900) switchMobileTab("doc");
+          document.getElementById("fileInput").click();
+        }
+      );
+    }
+
+    // Query Submission
+    function useQuery(text) {
+      if (!activeUploadId) {
+        requireDocumentUpload();
+        return;
+      }
+      document.getElementById("queryInput").value = text;
+      handleQuerySubmit(new Event("submit"));
+    }
+
+    async function handleQuerySubmit(e) {
+      e.preventDefault();
+      const input = document.getElementById("queryInput");
+      const question = input.value.trim();
+      if (!question) return;
+
+      if (!activeUploadId) {
+        requireDocumentUpload();
+        return;
+      }
+
+      document.getElementById("emptyState").style.display = "none";
+
+      // Append User message
+      appendUserMessage(question);
+      input.value = "";
+
+      // Append Thinking state box
+      const msgId = "msg_" + Date.now();
+      const thinkingBox = appendThinkingBox(msgId);
+
+      const startTime = Date.now();
+      const timerInterval = setInterval(() => {
+        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+        const timerEl = document.getElementById(`timer_${msgId}`);
+        if (timerEl) timerEl.textContent = `${elapsed}s`;
+      }, 100);
+
+      try {
+        const resp = await fetch(`${API_BASE}/query`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            upload_id: activeUploadId,
+            question: question,
+            top_k: 3
+          })
+        });
+
+        clearInterval(timerInterval);
+
+        if (!resp.ok) {
+          let errDetail = `Server returned HTTP ${resp.status}`;
+          try {
+            const errData = await resp.json();
+            errDetail = errData.detail || errData.error || errDetail;
+          } catch (_) {}
+
+          finalizeThinkingBox(msgId, { error: errDetail });
+          appendAnswer(msgId, { 
+            answer: `[${resp.status} ${resp.statusText || 'Error'}]: ${errDetail}`, 
+            sources: [] 
+          });
+
+          if (resp.status === 404) {
+            showErrorModal("404 NOT FOUND", "Document Not Found", `Upload ID '${activeUploadId}' was not found in the vector index. Please upload a PDF first.`);
+          } else if (resp.status === 500) {
+            showErrorModal("500 INTERNAL ERROR", "Query Processing Failed", errDetail);
+          } else if (resp.status === 503) {
+            showErrorModal("503 SERVICE UNAVAILABLE", "AI Service Unavailable", errDetail);
+          } else {
+            showErrorModal(`${resp.status} ERROR`, "Query Failed", errDetail);
+          }
+          return;
+        }
+
+        const data = await resp.json();
+        finalizeThinkingBox(msgId, data);
+        appendAnswer(msgId, data);
+      } catch (err) {
+        clearInterval(timerInterval);
+        const isNet = err instanceof TypeError || !navigator.onLine;
+        const msg = isNet 
+          ? "Could not establish connection to the backend server. Please verify your connection or check if the server is running."
+          : err.message;
+        finalizeThinkingBox(msgId, { error: msg });
+        appendAnswer(msgId, { answer: `[Network Error]: ${msg}`, sources: [] });
+        showErrorModal("NETWORK ERROR", "Connection Lost", msg);
+      }
+    }
+
+    function appendUserMessage(text) {
+      const container = document.getElementById("messagesContainer");
+      const div = document.createElement("div");
+      div.className = "message-user";
+      div.textContent = text;
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function appendThinkingBox(id) {
+      const container = document.getElementById("messagesContainer");
+      const wrapper = document.createElement("div");
+      wrapper.className = "message-assistant";
+      wrapper.id = `wrapper_${id}`;
+
+      wrapper.innerHTML = `
+        <div class="thinking-box" id="box_${id}">
+          <button class="thinking-toggle" onclick="toggleThinking('${id}')">
+            <svg class="thinking-sparkle" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z"/>
+            </svg>
+            <span class="thinking-label shimmer-text" id="label_${id}">Thinking</span>
+            <span class="thinking-duration font-mono" id="timer_${id}">0.0s</span>
+            <svg class="thinking-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M6 9l6 6 6-6"/>
+            </svg>
+          </button>
+          <div class="thinking-content" id="content_${id}">
+            Searching vector store for nearest chunks...
+          </div>
+        </div>
+      `;
+      container.appendChild(wrapper);
+      container.scrollTop = container.scrollHeight;
+      return wrapper;
+    }
+
+    function toggleThinking(id) {
+      const box = document.getElementById(`box_${id}`);
+      if (box) box.classList.toggle("expanded");
+    }
+
+    function finalizeThinkingBox(id, data) {
+      const label = document.getElementById(`label_${id}`);
+      if (label) {
+        label.classList.remove("shimmer-text");
+        label.textContent = "Reasoning complete";
+      }
+      const content = document.getElementById(`content_${id}`);
+      if (content) {
+        const sourcesCount = (data.sources || []).length;
+        content.innerHTML = `
+          <div>• Retrieved ${sourcesCount} relevant chunk(s) from vector store</div>
+          <div>• Synthesized answer using <strong>${data.model_used || "Gemini 3.6 Flash"}</strong></div>
+          ${data.error ? `<div style="color: var(--red); margin-top:4px;">• Note: ${data.error}</div>` : ""}
+        `;
+      }
+    }
+
+    function appendAnswer(id, data) {
+      const wrapper = document.getElementById(`wrapper_${id}`);
+      if (!wrapper) return;
+
+      const answerCard = document.createElement("div");
+      answerCard.className = "answer-card";
+
+      let sourcesHtml = "";
+      if (data.sources && data.sources.length) {
+        sourcesHtml = `
+          <div class="sources-header">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+            ${data.sources.length} Verified Sources
+          </div>
+          <div class="source-chips">
+            ${data.sources.map((s, idx) => `
+              <div class="source-chip" onclick="toggleSourcePreview('${id}', ${idx})">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path></svg>
+                Page ${s.page} • bbox [${s.bbox.map(n => Math.round(n)).join(", ")}]
+              </div>
+            `).join("")}
+          </div>
+          ${data.sources.map((s, idx) => `
+            <div class="source-preview-box" id="src_prev_${id}_${idx}">
+              <div style="font-size:11px; color:var(--ink-3); margin-bottom:4px;">Chunk: ${s.chunk_id} | Page: ${s.page} | Element IDs: ${JSON.stringify(s.element_ids)}</div>
+              <div>"${s.text_snippet}"</div>
+            </div>
+          `).join("")}
+        `;
+      }
+
+      answerCard.innerHTML = `
+        <div class="answer-text">${data.answer}</div>
+        ${sourcesHtml}
+      `;
+
+      wrapper.appendChild(answerCard);
+      const container = document.getElementById("messagesContainer");
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function toggleSourcePreview(msgId, idx) {
+      const box = document.getElementById(`src_prev_${msgId}_${idx}`);
+      if (box) box.classList.toggle("open");
+    }
+  </script>
+</body>
+</html>
